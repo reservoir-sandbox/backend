@@ -1,0 +1,50 @@
+# VCS
+.git
+.gitignore
+.gitattributes
+.github/
+
+# Python bytecode/cache
+__pycache__/
+*.py[codz]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.pyre/
+*.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+*.log
+
+# Environments
+.env
+.env.*
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# IDE/OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+tests/
+.ipynb_checkpoints/
