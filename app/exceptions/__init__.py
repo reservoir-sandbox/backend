@@ -1,4 +1,5 @@
 from .custom import (
+    AccessDenied,
     AppException,
     InvalidCredentials,
     TokenExpiredError,
@@ -16,4 +17,5 @@ __all__ = (
     "UserAlreadyExists",
     "UserNotFound",
     "register_exception_handlers",
+    "AccessDenied",
 )

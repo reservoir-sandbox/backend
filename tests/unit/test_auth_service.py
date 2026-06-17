@@ -41,17 +41,19 @@ def test_validate_token_payload_invalid(payload):
         AuthService._validate_token_payload(payload, "access", "invalid")
 
 
-def test_get_user_id_from_token(test_settings: Settings):
+def test_get_payload_from_token(test_settings: Settings):
     service = AuthService(UserService(FakeUserCRUD()), test_settings)
     token, _ = service.jwt_manager.create_token(
-        {"sub": "777", "type": service.ACCESS_TOKEN_TYPE},
+        {"sub": "777", "role": "user", "type": service.ACCESS_TOKEN_TYPE},
         test_settings.access_secret,
         10,
     )
-    assert service.get_user_id_from_token(token) == 777
+    current_user = service.get_user_from_access_token(token)
+    assert current_user.id == 777
+    assert current_user.role == "user"
 
 
-def test_get_user_id_from_token_rejects_refresh_type(test_settings: Settings):
+def test_get_user_from_access_token_rejects_refresh_type(test_settings: Settings):
     service = AuthService(UserService(FakeUserCRUD()), test_settings)
     token, _ = service.jwt_manager.create_token(
         {"sub": "1", "type": service.REFRESH_TOKEN_TYPE},
@@ -60,10 +62,10 @@ def test_get_user_id_from_token_rejects_refresh_type(test_settings: Settings):
     )
 
     with pytest.raises(TokenInvalidError):
-        service.get_user_id_from_token(token)
+        service.get_user_from_access_token(token)
 
 
-def test_get_user_id_from_token_expired(test_settings: Settings):
+def test_get_user_from_access_token_expired(test_settings: Settings):
     service = AuthService(UserService(FakeUserCRUD()), test_settings)
     token, _ = service.jwt_manager.create_token(
         {"sub": "1", "type": service.ACCESS_TOKEN_TYPE},
@@ -72,7 +74,7 @@ def test_get_user_id_from_token_expired(test_settings: Settings):
     )
 
     with pytest.raises(TokenExpiredError):
-        service.get_user_id_from_token(token)
+        service.get_user_from_access_token(token)
 
 
 @pytest.mark.asyncio

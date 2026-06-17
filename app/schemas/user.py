@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
 
+from app.auth.roles import Role
+
 
 # Base schema for user data
 class UserBase(BaseModel):
@@ -25,7 +27,7 @@ class UserRegister(UserBase):
 class UserRead(UserBase):
     id: int
     is_active: bool
-    role: str
+    role: Role
     created_at: datetime
     updated_at: datetime
 

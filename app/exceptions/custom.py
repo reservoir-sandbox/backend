@@ -35,3 +35,8 @@ class TokenInvalidError(AppException):
 class UserNotFound(AppException):
     status_code = 404
     detail = "User not found"
+
+
+class AccessDenied(AppException):
+    status_code = 403
+    detail = "Access Denied"

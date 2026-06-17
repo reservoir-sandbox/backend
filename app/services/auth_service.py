@@ -1,6 +1,8 @@
 import redis.asyncio as redis
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.schemas import CurrentUser
 from app.core import JWTManager, Settings, verify_password
 from app.exceptions import InvalidCredentials, TokenInvalidError, UserNotFound
 from app.services.user_service import UserService
@@ -64,7 +66,7 @@ class AuthService:
             raise InvalidCredentials()
 
         access_token, _ = self.jwt_manager.create_token(
-            {"sub": str(user.id), "type": self.ACCESS_TOKEN_TYPE},
+            {"sub": str(user.id), "role": user.role, "type": self.ACCESS_TOKEN_TYPE},
             self.settings.access_secret,
             self.settings.access_token_expire_m,
         )
@@ -101,7 +103,7 @@ class AuthService:
             raise TokenInvalidError("Refresh token is invalid")
 
         new_access_token, _ = self.jwt_manager.create_token(
-            {"sub": str(user.id), "type": self.ACCESS_TOKEN_TYPE},
+            {"sub": str(user.id), "role": user.role, "type": self.ACCESS_TOKEN_TYPE},
             self.settings.access_secret,
             self.settings.access_token_expire_m,
         )
@@ -132,9 +134,12 @@ class AuthService:
 
         await self._consume_refresh_token(redis_client, token_jti)
 
-    def get_user_id_from_token(self, token: str) -> int:
+    def get_user_from_access_token(self, token: str) -> CurrentUser:
         payload = self.jwt_manager.decode_token(token, self.settings.access_secret)
-        user_id, _ = self._validate_token_payload(
+        self._validate_token_payload(
             payload, self.ACCESS_TOKEN_TYPE, "Invalid access token"
         )
-        return user_id
+        try:
+            return CurrentUser.model_validate(payload)
+        except ValidationError:
+            raise TokenInvalidError("Invalid access token")
