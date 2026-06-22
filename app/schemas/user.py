@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
 
-from app.auth.roles import Role
+from app.enums import Role
 
 
 # Base schema for user data

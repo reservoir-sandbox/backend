@@ -20,6 +20,7 @@ slowapi = "^0.1.9"
 alembic = "^1.18.4"
 asyncpg = "^0.31.0"
 redis = "^7.4.0"
+aiobotocore = "^3.7.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^26.3.1"

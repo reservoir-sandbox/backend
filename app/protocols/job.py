@@ -10,6 +10,10 @@ class JobCRUDProtocol(Protocol):
 
     async def get_by_id(self, session: AsyncSession, job_id: int) -> Job | None: ...
 
+    async def get_latest_by_sample_id(
+        self, session: AsyncSession, sample_id: int
+    ) -> Job | None: ...
+
 
 class JobTaskCRUDProtocol(Protocol):
     async def create(self, session: AsyncSession, job_task: JobTask) -> JobTask: ...

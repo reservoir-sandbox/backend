@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from .roles import Role
+from app.enums import Role
 
 
 # Schema for user data from token

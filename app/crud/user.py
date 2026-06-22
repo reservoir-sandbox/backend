@@ -9,8 +9,7 @@ from app.models import User
 class UserCRUD:
     async def create_user(self, session: AsyncSession, user: User) -> User:
         session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        await session.flush()
         return user
 
     async def get_by_id(self, session: AsyncSession, user_id: int) -> User | None:

@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     ]
     database_url: str = "DATABASE_URL"
     redis_url: str = "REDIS_URL"
+    s3_access_key: str = "CHANGE_ME_S3_ACCESS_KEY"
+    s3_secret_key: str = "CHANGE_ME_S3_SECRET_KEY"
+    s3_endpoint_url: str = "CHANGE_ME_S3_ENDPOINT_URL"
+    s3_bucket_name: str = "CHANGE_ME_S3_BUCKET_NAME"
     access_secret: str = "CHANGE_ME_ACCESS_SECRET_MIN_32_CHARS"
     refresh_secret: str = "CHANGE_ME_REFRESH_SECRET_MIN_32_CHARS"
     access_token_expire_m: int = 15  # 15 minutes

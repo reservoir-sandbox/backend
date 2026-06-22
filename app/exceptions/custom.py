@@ -40,3 +40,13 @@ class UserNotFound(AppException):
 class AccessDenied(AppException):
     status_code = 403
     detail = "Access Denied"
+
+
+class FileTooLargeError(AppException):
+    status_code = 413
+    detail = "File size exceeds the maximum limit."
+
+
+class InvalidELFError(AppException):
+    status_code = 400
+    detail = "Invalid file format. Only ELF files are allowed."

@@ -1,7 +1,9 @@
 from .custom import (
     AccessDenied,
     AppException,
+    FileTooLargeError,
     InvalidCredentials,
+    InvalidELFError,
     TokenExpiredError,
     TokenInvalidError,
     UserAlreadyExists,
@@ -18,4 +20,6 @@ __all__ = (
     "UserNotFound",
     "register_exception_handlers",
     "AccessDenied",
+    "FileTooLargeError",
+    "InvalidELFError",
 )
