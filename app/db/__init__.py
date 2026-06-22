@@ -1,12 +1,9 @@
-from .db_helper import DatabaseHelper, db_helper
-from .redis_helper import RedisHelper, redis_helper
-from .s3_client import S3Client, get_s3_client
+from .postgres import DatabaseClient
+from .redis import RedisClient
+from .s3 import S3Client
 
 __all__ = (
-    "DatabaseHelper",
-    "db_helper",
-    "RedisHelper",
-    "redis_helper",
+    "DatabaseClient",
+    "RedisClient",
     "S3Client",
-    "get_s3_client",
 )

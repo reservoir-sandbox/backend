@@ -1,10 +1,9 @@
 import asyncio
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 
-from app.core import logger
-from app.db import db_helper, redis_helper
+from app.db import DatabaseClient, RedisClient
 
 router = APIRouter()
 
@@ -15,21 +14,22 @@ async def liveness_probe():
 
 
 @router.get("/health/ready")
-async def readiness_probe():
-    try:
-        postgres_status = await asyncio.wait_for(db_helper.ping(), timeout=3)
-    except Exception as e:
-        logger.warning(f"Postgres health check failed: {e}")
-        postgres_status = False
+async def readiness_probe(request: Request):
+    db: DatabaseClient = request.app.state.db
+    redis: RedisClient = request.app.state.redis
 
-    try:
-        redis_status = await asyncio.wait_for(redis_helper.ping(), timeout=3)
-    except Exception as e:
-        logger.warning(f"Redis health check failed: {e}")
-        redis_status = False
+    postgres_result, redis_result = await asyncio.gather(
+        asyncio.wait_for(db.ping(), timeout=3),
+        asyncio.wait_for(redis.ping(), timeout=3),
+        return_exceptions=True,
+    )
+
+    postgres_status = (
+        False if isinstance(postgres_result, Exception) else postgres_result
+    )
+    redis_status = False if isinstance(redis_result, Exception) else redis_result
 
     overall_ok = postgres_status and redis_status
-
     payload = {
         "status": "ok" if overall_ok else "error",
         "services": {

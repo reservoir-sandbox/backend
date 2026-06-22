@@ -2,7 +2,7 @@ from fastapi import Depends
 
 from app.core import Settings, get_settings
 from app.crud import JobCRUD, JobTaskCRUD, SampleCRUD, UserCRUD, UserSampleCRUD
-from app.db import S3Client, get_s3_client
+from app.db import S3Client
 from app.services import (
     AuthService,
     JobService,
@@ -11,13 +11,14 @@ from app.services import (
     UserService,
 )
 
-from .repositories import (
+from .crud import (
     get_job_crud,
     get_job_task_crud,
     get_sample_crud,
     get_user_crud,
     get_user_sample_crud,
 )
+from .s3 import get_s3_client
 
 
 async def get_user_service(user_crud: UserCRUD = Depends(get_user_crud)):

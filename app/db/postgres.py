@@ -3,10 +3,8 @@ from typing import AsyncGenerator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core import get_settings
 
-
-class DatabaseHelper:
+class DatabaseClient:
     def __init__(
         self,
         url: str,
@@ -37,7 +35,7 @@ class DatabaseHelper:
             try:
                 yield session
                 await session.commit()
-            except:
+            except Exception:
                 await session.rollback()
                 raise
 
@@ -48,9 +46,3 @@ class DatabaseHelper:
             return True
         except Exception:
             return False
-
-
-settings = get_settings()
-db_helper = DatabaseHelper(
-    url=settings.database_url,
-)

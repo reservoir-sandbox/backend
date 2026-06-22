@@ -2,13 +2,30 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.db import db_helper, redis_helper
+from app.core import get_settings
+from app.db import DatabaseClient, RedisClient, S3Client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup code
+    settings = get_settings()
+
+    app.state.db = DatabaseClient(
+        url=settings.database_url,
+    )
+
+    app.state.redis = RedisClient(
+        url=settings.redis_url,
+    )
+
+    app.state.s3 = S3Client(
+        access_key=settings.s3_access_key,
+        secret_key=settings.s3_secret_key,
+        endpoint_url=settings.s3_endpoint_url,
+        bucket_name=settings.s3_bucket_name,
+    )
+
     yield
-    # shutdown code
-    await db_helper.dispose()
-    await redis_helper.close()
+
+    await app.state.db.dispose()
+    await app.state.redis.close()
