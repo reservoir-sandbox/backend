@@ -8,8 +8,9 @@ Create Date: 2026-06-22 14:46:34.110304
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "dce39bbe7483"
@@ -41,9 +42,7 @@ def upgrade() -> None:
         sa.Column("email", sa.String(), nullable=False),
         sa.Column("password_hash", sa.String(), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False),
-        sa.Column(
-            "role", sa.Enum("USER", "ADMIN", name="role"), nullable=False
-        ),
+        sa.Column("role", sa.Enum("USER", "ADMIN", name="role"), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -71,9 +70,7 @@ def upgrade() -> None:
         sa.Column("sample_id", sa.Integer(), nullable=False),
         sa.Column(
             "status",
-            sa.Enum(
-                "PENDING", "RUNNING", "COMPLETED", "FAILED", name="status"
-            ),
+            sa.Enum("PENDING", "RUNNING", "COMPLETED", "FAILED", name="status"),
             nullable=False,
         ),
         sa.Column(
@@ -93,9 +90,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_jobs")),
     )
-    op.create_index(
-        op.f("ix_jobs_sample_id"), "jobs", ["sample_id"], unique=False
-    )
+    op.create_index(op.f("ix_jobs_sample_id"), "jobs", ["sample_id"], unique=False)
     op.create_table(
         "user_samples",
         sa.Column("user_id", sa.Integer(), nullable=False),
@@ -135,9 +130,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "status",
-            sa.Enum(
-                "PENDING", "RUNNING", "COMPLETED", "FAILED", name="status"
-            ),
+            sa.Enum("PENDING", "RUNNING", "COMPLETED", "FAILED", name="status"),
             nullable=False,
         ),
         sa.Column(
@@ -158,9 +151,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_job_tasks")),
     )
-    op.create_index(
-        op.f("ix_job_tasks_job_id"), "job_tasks", ["job_id"], unique=False
-    )
+    op.create_index(op.f("ix_job_tasks_job_id"), "job_tasks", ["job_id"], unique=False)
 
 
 def downgrade() -> None:
