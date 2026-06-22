@@ -1,8 +1,8 @@
 """create_initial_models
 
-Revision ID: 86fab490f8f5
+Revision ID: dce39bbe7483
 Revises:
-Create Date: 2026-06-22 03:14:56.438916
+Create Date: 2026-06-22 14:46:34.110304
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "86fab490f8f5"
+revision: str = "dce39bbe7483"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -23,7 +23,6 @@ def upgrade() -> None:
     op.create_table(
         "samples",
         sa.Column("size", sa.Integer(), nullable=False),
-        sa.Column("content_type", sa.String(), nullable=False),
         sa.Column("sha256", sa.String(), nullable=False),
         sa.Column("object_name", sa.String(), nullable=False),
         sa.Column(

@@ -17,7 +17,6 @@ class Sample(Base):
     __tablename__ = "samples"
 
     size: Mapped[int] = mapped_column(nullable=False)
-    content_type: Mapped[str] = mapped_column(nullable=False)
 
     sha256: Mapped[str] = mapped_column(unique=True, nullable=False)
     object_name: Mapped[str] = mapped_column(nullable=False)

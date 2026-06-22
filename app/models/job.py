@@ -25,7 +25,9 @@ class Job(Base):
     )
 
     status: Mapped[Status] = mapped_column(
-        Enum(Status, name="status"), default=Status.PENDING, nullable=False
+        Enum(Status, name="status"),
+        default=Status.PENDING,
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(
