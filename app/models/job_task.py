@@ -6,26 +6,32 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, Enum, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.enums import Status
+from app.enums import Status, TaskType
 
 from .base import Base
 
 if TYPE_CHECKING:
-    from .job_task import JobTask
-    from .sample import Sample
+    from .job import Job
 
 
-class Job(Base):
-    __tablename__ = "jobs"
+class JobTask(Base):
+    __tablename__ = "job_tasks"
 
-    sample_id: Mapped[int] = mapped_column(
-        ForeignKey("samples.id", ondelete="CASCADE"),
+    job_id: Mapped[int] = mapped_column(
+        ForeignKey("jobs.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
     )
 
+    task_type: Mapped[TaskType] = mapped_column(
+        Enum(TaskType, name="task_type"),
+        nullable=False,
+    )
+
     status: Mapped[Status] = mapped_column(
-        Enum(Status, name="status"), default=Status.PENDING, nullable=False
+        Enum(Status, name="status"),
+        default=Status.PENDING,
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -44,8 +50,6 @@ class Job(Base):
         nullable=True,
     )
 
-    sample: Mapped[Sample] = relationship(back_populates="jobs")
-    tasks: Mapped[list[JobTask]] = relationship(
-        back_populates="job",
-        cascade="all, delete-orphan",
-    )
+    error: Mapped[str | None] = mapped_column(nullable=True)
+
+    job: Mapped[Job] = relationship(back_populates="tasks")

@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, Enum, Index, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.auth.roles import Role
+from app.enums import Role
 
 from .base import Base
 
 if TYPE_CHECKING:
-    from .sample import Sample
+    from .user_sample import UserSample
 
 
 class User(Base):
@@ -24,7 +24,7 @@ class User(Base):
 
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     role: Mapped[Role] = mapped_column(
-        Enum(Role),
+        Enum(Role, name="role"),
         default=Role.USER,
         nullable=False,
     )
@@ -41,8 +41,9 @@ class User(Base):
         nullable=False,
     )
 
-    samples: Mapped[list[Sample]] = relationship(
-        back_populates="owner", cascade="all, delete-orphan"
+    user_samples: Mapped[list[UserSample]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (Index(None, func.lower(username), unique=True),)
