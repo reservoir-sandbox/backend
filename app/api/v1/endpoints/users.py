@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_user_service
 from app.auth.permissions import RequireRole
-from app.auth.roles import Role
 from app.auth.schemas import CurrentUser
 from app.db import db_helper
+from app.enums import Role
 from app.schemas import UserRead
 from app.services import UserService
 

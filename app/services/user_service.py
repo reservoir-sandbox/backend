@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import hash_password
 from app.exceptions import UserAlreadyExists, UserNotFound
 from app.models import User
+from app.protocols import UserCRUDProtocol
 from app.schemas import UserRegister
-from app.services.protocols import UserCRUDProtocol
 
 
 class UserService:
@@ -24,7 +24,6 @@ class UserService:
         try:
             return await self.user_crud.create_user(session, user)
         except IntegrityError as exc:
-            await session.rollback()
             raise UserAlreadyExists() from exc
 
     async def get_by_id(self, session: AsyncSession, user_id: int) -> User:
