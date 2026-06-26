@@ -50,3 +50,8 @@ class FileTooLargeError(AppException):
 class InvalidELFError(AppException):
     status_code = 400
     detail = "Invalid file format. Only ELF files are allowed."
+
+
+class JobNotFoundError(AppException):
+    status_code = 404
+    detail = "Job not found"

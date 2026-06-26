@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums import TaskType
+from app.exceptions import JobNotFoundError
 from app.models import Job, JobTask, Sample
 from app.protocols import JobCRUDProtocol, JobTaskCRUDProtocol
 
@@ -34,3 +35,11 @@ class JobService:
         self, session: AsyncSession, sample_id: int
     ) -> Job | None:
         return await self.job_crud.get_latest_by_sample_id(session, sample_id)
+
+    async def get_job_details_by_id(
+        self, session: AsyncSession, job_id: int, user_id: int
+    ) -> Job | None:
+        job = await self.job_crud.get_job_details_by_id(session, job_id, user_id)
+        if job is None:
+            raise JobNotFoundError()
+        return job
