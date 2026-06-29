@@ -29,3 +29,13 @@ async def get_samples(
     service: SampleService = Depends(get_sample_service),
 ):
     return await service.get_samples(current_user.id, session)
+
+
+@router.delete("/samples/{id:int}", status_code=204)
+async def delete_user_sample(
+    id: int,
+    current_user: CurrentUser = Depends(RequireRole(Role.USER)),
+    session: AsyncSession = Depends(get_db_session),
+    service: SampleService = Depends(get_sample_service),
+):
+    await service.delete_user_sample(id, current_user.id, session)

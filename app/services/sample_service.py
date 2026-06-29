@@ -109,3 +109,13 @@ class SampleService:
     ) -> list[SampleListItem]:
         result = await self.user_sample_crud.get_samples_by_user(session, user_id)
         return [SampleListItem(**row) for row in result]
+
+    async def delete_user_sample(
+        self, sample_id: int, user_id: int, session: AsyncSession
+    ) -> None:
+        user_sample = await self.user_sample_crud.get_by_user_and_sample(
+            session, user_id, sample_id
+        )
+        if not user_sample:
+            return
+        await session.delete(user_sample)
