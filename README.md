@@ -52,7 +52,7 @@ FastAPI Backend
 - CORS middleware
 - Health checks: liveness (`/health/live`) and readiness (`/health/ready`) probing PostgreSQL and Redis
 - **Sample (ELF binary) upload**:
-  - Validation of ELF magic bytes `\\x7fELF`
+  - Validation of ELF magic bytes `\x7fELF`
   - File size limit (10 MB)
   - SHA256 deduplication
   - Upload to S3-compatible storage (MinIO / AWS S3)
@@ -128,7 +128,7 @@ alembic/            # Database migrations
 1. **User uploads a file** (`POST /api/v1/samples`, multipart, requires Bearer token)
 2. **Validation** — checks:
    - File size ≤ 10 MB
-   - Magic bytes = `\\x7fELF` (ELF binary)
+   - Magic bytes = `\x7fELF` (ELF binary)
 3. **SHA256 hash** of file content is computed
 4. **Deduplication** — checks if sample with same SHA256 already exists in database
    - If **exists**:
@@ -150,18 +150,393 @@ alembic/            # Database migrations
 
 ## API Endpoints
 
-| Method | Path                    | Auth             | Description                                      |
-|--------|------------------------|------------------|--------------------------------------------------|
-| GET    | `/health/live`         | No               | Liveness probe                                   |
-| GET    | `/health/ready`        | No               | Readiness probe (checks PostgreSQL + Redis)      |
-| POST   | `/api/v1/register`     | No               | Register new user                                |
-| POST   | `/api/v1/login`        | No               | Login (username/password form)                   |
-| POST   | `/api/v1/refresh`      | No               | Rotate refresh token, issue new access token     |
-| POST   | `/api/v1/logout`       | No               | Revoke refresh token, clear cookie               |
-| GET    | `/api/v1/about_me`     | Bearer           | Get current user profile                         |
-| POST   | `/api/v1/samples`      | Bearer           | Upload an ELF binary for analysis                |
+### Overview
 
-Full OpenAPI documentation is available at `http://localhost:8000/docs` after startup.
+| Method | Path                          | Auth             | Description                                        |
+|--------|-------------------------------|------------------|----------------------------------------------------|
+| GET    | `/health/live`                | No               | Liveness probe                                     |
+| GET    | `/health/ready`               | No               | Readiness probe (checks PostgreSQL + Redis)        |
+| POST   | `/api/v1/register`            | No               | Register new user                                  |
+| POST   | `/api/v1/login`               | No               | Login (username/password form)                     |
+| POST   | `/api/v1/refresh`             | No               | Rotate refresh token, issue new access token       |
+| POST   | `/api/v1/logout`              | No               | Revoke refresh token, clear cookie                 |
+| GET    | `/api/v1/about_me`            | Bearer           | Get current user profile                           |
+| GET    | `/api/v1/samples`             | Bearer           | List all samples owned by current user             |
+| POST   | `/api/v1/samples`             | Bearer           | Upload an ELF binary for analysis                  |
+| DELETE | `/api/v1/samples/{id}`        | Bearer           | Delete a user-sample link (remove ownership)       |
+| GET    | `/api/v1/jobs/{id}`           | Bearer           | Get job details (with tasks) by job ID             |
+
+---
+
+### Endpoint Details
+
+---
+
+#### `GET /health/live`
+
+Simple liveness check. No authentication required.
+
+**Example request:**
+```bash
+curl -X GET "http://127.0.0.1:8000/health/live"
+```
+
+**Example response (200 OK):**
+```json
+{
+  "status": "ok"
+}
+```
+
+---
+
+#### `GET /health/ready`
+
+Readiness probe. Verifies connectivity to PostgreSQL and Redis.
+
+**Example request:**
+```bash
+curl -X GET "http://127.0.0.1:8000/health/ready"
+```
+
+**Example response (200 OK):**
+```json
+{
+  "status": "ok",
+  "services": {
+    "postgres": "ok",
+    "redis": "ok"
+  }
+}
+```
+
+**Example response (503 Service Unavailable) when a service is down:**
+```json
+{
+  "status": "error",
+  "services": {
+    "postgres": "error",
+    "redis": "ok"
+  }
+}
+```
+
+---
+
+#### `POST /api/v1/register`
+
+Create a new user account.
+
+**Request body** — JSON (`UserRegister` schema):
+| Field    | Type     | Constraints   | Description     |
+|----------|----------|---------------|-----------------|
+| username | string   | 4–24 chars    | Lowercased automatically |
+| email    | string   | Valid email   | User's email address |
+| password | string   | 8–24 chars    | Plain-text password (hashed with Argon2) |
+
+**Example request:**
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/register" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"john_doe","email":"john@example.com","password":"StrongPass123"}'
+```
+
+**Example response (201 Created):**
+```json
+{
+  "id": 1,
+  "username": "john_doe",
+  "email": "john@example.com",
+  "is_active": true,
+  "role": "user",
+  "created_at": "2025-03-28T12:00:00",
+  "updated_at": "2025-03-28T12:00:00"
+}
+```
+
+**Possible errors:**  
+- `409 Conflict` — username or email already exists.
+
+---
+
+#### `POST /api/v1/login`
+
+Authenticate with username and password using `application/x-www-form-urlencoded` (standard OAuth2 password flow).
+
+Sets an `HttpOnly` cookie named `refresh_token` and returns an access token in the response body.
+
+**Request body** — form data:
+| Field    | Type   | Description        |
+|----------|--------|--------------------|
+| username | string | User's username    |
+| password | string | User's password    |
+
+**Example request:**
+```bash
+curl -i -X POST "http://127.0.0.1:8000/api/v1/login" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -c cookies.txt \
+  -d "username=john_doe&password=StrongPass123"
+```
+
+**Example response (200 OK) — Headers will include `Set-Cookie` with the refresh token:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer"
+}
+```
+
+**Possible errors:**  
+- `401 Unauthorized` — invalid credentials.
+
+---
+
+#### `POST /api/v1/refresh`
+
+Exchange a valid refresh token (from cookie) for a new access/refresh pair. Requires the `refresh_token` cookie to be present. The old refresh token is invalidated (one-time use).
+
+**Example request (cookie from previous login):**
+```bash
+curl -i -X POST "http://127.0.0.1:8000/api/v1/refresh" \
+  -b cookies.txt -c cookies.txt
+```
+
+**Example response (200 OK):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer"
+}
+```
+
+**Possible errors:**  
+- `401 Unauthorized` — missing, expired, or invalid refresh token.
+
+---
+
+#### `POST /api/v1/logout`
+
+Revoke the current refresh token from Redis and clear the `refresh_token` cookie.
+
+**Example request:**
+```bash
+curl -i -X POST "http://127.0.0.1:8000/api/v1/logout" \
+  -b cookies.txt -c cookies.txt
+```
+
+**Example response (200 OK):**
+```json
+{
+  "message": "logout successfully!"
+}
+```
+
+---
+
+#### `GET /api/v1/about_me`
+
+Get the profile of the currently authenticated user.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Example request:**
+```bash
+curl -X GET "http://127.0.0.1:8000/api/v1/about_me" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+**Example response (200 OK):**
+```json
+{
+  "id": 1,
+  "username": "john_doe",
+  "email": "john@example.com",
+  "is_active": true,
+  "role": "user",
+  "created_at": "2025-03-28T12:00:00",
+  "updated_at": "2025-03-28T12:00:00"
+}
+```
+
+**Possible errors:**  
+- `401 Unauthorized` — missing or invalid token.
+
+---
+
+#### `GET /api/v1/samples`
+
+List all samples owned by the current user. Returns an array of `SampleListItem` objects.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Example request:**
+```bash
+curl -X GET "http://127.0.0.1:8000/api/v1/samples" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+**Example response (200 OK):**
+```json
+[
+  {
+    "sample_id": 1,
+    "filename": "malware.elf",
+    "uploaded_at": "2025-03-28T12:05:00",
+    "latest_job_id": 1,
+    "latest_job_status": "pending"
+  },
+  {
+    "sample_id": 2,
+    "filename": "benign.elf",
+    "uploaded_at": "2025-03-28T12:10:00",
+    "latest_job_id": 2,
+    "latest_job_status": "completed"
+  }
+]
+```
+
+**Possible errors:**  
+- `401 Unauthorized` — missing or invalid token.
+
+---
+
+#### `POST /api/v1/samples`
+
+Upload an ELF binary for analysis. The file is validated for ELF magic bytes, deduplicated by SHA256, and stored in S3. A new Job with three tasks is created if the sample is new; otherwise an existing Job may be returned.
+
+**Headers:** `Authorization: Bearer <access_token>`  
+**Body:** `multipart/form-data` with field name `sample`
+
+**Example request:**
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/samples" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -F "sample=@/path/to/malware.elf"
+```
+
+**Example response (201 Created):**
+```json
+{
+  "id": 1,
+  "sample_id": 1,
+  "status": "pending",
+  "created_at": "2025-03-28T12:15:00",
+  "started_at": null,
+  "finished_at": null
+}
+```
+
+**Possible errors:**  
+- `400 Bad Request` — file is not ELF (magic bytes mismatch).  
+- `413 Payload Too Large` — file exceeds 10 MB.  
+- `401 Unauthorized` — missing or invalid token.
+
+---
+
+#### `DELETE /api/v1/samples/{id}`
+
+Delete the link between the current user and a sample (remove ownership). The sample itself (S3 object + DB record) is **not** removed.
+
+**Headers:** `Authorization: Bearer <access_token>`  
+**Path parameter:** `id` — integer, the `sample_id` from the list.
+
+**Example request:**
+```bash
+curl -X DELETE "http://127.0.0.1:8000/api/v1/samples/1" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+**Example response (204 No Content):** — empty body.
+
+**Possible errors:**  
+- `404 Not Found` — sample does not exist or does not belong to this user.  
+- `401 Unauthorized` — missing or invalid token.
+
+---
+
+#### `GET /api/v1/jobs/{id}`
+
+Get detailed information about a specific job, including its tasks (`JobTaskRead` list).
+
+**Headers:** `Authorization: Bearer <access_token>`  
+**Path parameter:** `id` — integer, the job ID.
+
+**Example request:**
+```bash
+curl -X GET "http://127.0.0.1:8000/api/v1/jobs/1" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+**Example response (200 OK):**
+```json
+{
+  "id": 1,
+  "sample_id": 1,
+  "status": "pending",
+  "created_at": "2025-03-28T12:15:00",
+  "started_at": null,
+  "finished_at": null,
+  "tasks": [
+    {
+      "id": 1,
+      "job_id": 1,
+      "task_type": "STATIC",
+      "status": "pending",
+      "created_at": "2025-03-28T12:15:00",
+      "started_at": null,
+      "finished_at": null,
+      "error": null
+    },
+    {
+      "id": 2,
+      "job_id": 1,
+      "task_type": "SANDBOX",
+      "status": "pending",
+      "created_at": "2025-03-28T12:15:00",
+      "started_at": null,
+      "finished_at": null,
+      "error": null
+    },
+    {
+      "id": 3,
+      "job_id": 1,
+      "task_type": "ML",
+      "status": "pending",
+      "created_at": "2025-03-28T12:15:00",
+      "started_at": null,
+      "finished_at": null,
+      "error": null
+    }
+  ]
+}
+```
+
+**Possible errors:**  
+- `404 Not Found` — job does not exist or does not belong to this user.  
+- `401 Unauthorized` — missing or invalid token.
+
+---
+
+## Error Model
+
+All application-specific errors return a JSON body with `{"detail": "..."}`.
+
+### Common HTTP status codes
+
+| Status | Error                          | Description                                |
+|--------|--------------------------------|--------------------------------------------|
+| 200    | OK                             | Successful operation                       |
+| 201    | Created                        | Resource created (register, upload sample) |
+| 204    | No Content                     | Resource deleted successfully              |
+| 400    | Bad Request                    | Invalid file format (non-ELF)              |
+| 401    | Unauthorized                   | Invalid credentials / expired or invalid token |
+| 403    | Forbidden                      | Access denied (insufficient role)          |
+| 404    | Not Found                      | User not found or resource not found       |
+| 409    | Conflict                       | User already exists                        |
+| 413    | Payload Too Large              | File exceeds maximum size (10 MB)          |
+| 429    | Too Many Requests              | Rate limit exceeded                        |
+| 500    | Internal Server Error          | Unexpected server error                    |
 
 ## Quick Start (Poetry)
 
@@ -259,75 +634,6 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 This compose expects a pre-built image from GitHub Container Registry and a properly filled `.env` file.
-
-## Request Examples
-
-### Register
-
-```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/register" \
-  -H "Content-Type: application/json" \
-  -d '{"username":"john_doe","email":"john@example.com","password":"StrongPass123"}'
-```
-
-### Login (stores refresh cookie)
-
-```bash
-curl -i -X POST "http://127.0.0.1:8000/api/v1/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -c cookies.txt \
-  -d "username=john_doe&password=StrongPass123"
-```
-
-Save the access_token from the response for subsequent requests.
-
-### Refresh
-
-```bash
-curl -i -X POST "http://127.0.0.1:8000/api/v1/refresh" \
-  -b cookies.txt -c cookies.txt
-```
-
-### About Me
-
-```bash
-curl -X GET "http://127.0.0.1:8000/api/v1/about_me" \
-  -H "Authorization: Bearer <access_token>"
-```
-
-### Upload Sample (ELF binary)
-
-```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/samples" \
-  -H "Authorization: Bearer <access_token>" \
-  -F "sample=@/path/to/malware.elf"
-```
-
-### Logout
-
-```bash
-curl -i -X POST "http://127.0.0.1:8000/api/v1/logout" \
-  -b cookies.txt -c cookies.txt
-```
-
-## Error Model
-
-All application-specific errors return a JSON body with `{"detail": "..."}`.
-
-### Common HTTP status codes
-
-| Status | Error                          | Description                                |
-|--------|--------------------------------|--------------------------------------------|
-| 200    | OK                             | Successful operation                       |
-| 201    | Created                        | Resource created (register, upload sample) |
-| 400    | Bad Request                    | Invalid file format (non-ELF)              |
-| 401    | Unauthorized                   | Invalid credentials / expired or invalid token |
-| 403    | Forbidden                      | Access denied (insufficient role)          |
-| 404    | Not Found                      | User not found                             |
-| 409    | Conflict                       | User already exists                        |
-| 413    | Payload Too Large              | File exceeds maximum size (10 MB)          |
-| 429    | Too Many Requests              | Rate limit exceeded                        |
-| 500    | Internal Server Error          | Unexpected server error                    |
 
 ## Testing
 
