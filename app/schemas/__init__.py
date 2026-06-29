@@ -1,5 +1,5 @@
 from .job import JobDetails, JobRead, JobTaskRead
-from .sample import SampleRead
+from .sample import SampleListItem, SampleRead
 from .user import Token, UserBase, UserRead, UserRegister
 
 __all__ = (
@@ -8,6 +8,7 @@ __all__ = (
     "UserRegister",
     "UserRead",
     "SampleRead",
+    "SampleListItem",
     "JobRead",
     "JobTaskRead",
     "JobDetails",

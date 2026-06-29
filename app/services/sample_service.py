@@ -8,6 +8,7 @@ from app.enums import Status
 from app.exceptions import FileTooLargeError, InvalidELFError
 from app.models import Job, Sample, UserSample
 from app.protocols import SampleCRUDProtocol, UserSampleCRUDProtocol
+from app.schemas.sample import SampleListItem
 from app.utils import calculate_sha256
 
 from .job_service import JobService
@@ -102,3 +103,9 @@ class SampleService:
         return await self.job_service.create_job_for_sample(
             session, sample_model, user_id
         )
+
+    async def get_samples(
+        self, user_id: int, session: AsyncSession
+    ) -> list[SampleListItem]:
+        result = await self.user_sample_crud.get_samples_by_user(session, user_id)
+        return [SampleListItem(**row) for row in result]

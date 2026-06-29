@@ -5,7 +5,7 @@ from app.auth.permissions import RequireRole
 from app.auth.schemas import CurrentUser
 from app.dependencies import get_db_session, get_sample_service
 from app.enums import Role
-from app.schemas import JobRead
+from app.schemas import JobRead, SampleListItem
 from app.services import SampleService
 
 router = APIRouter()
@@ -20,3 +20,12 @@ async def upload_sample(
     service: SampleService = Depends(get_sample_service),
 ):
     return await service.upload_sample(sample, current_user.id, session)
+
+
+@router.get("/samples", response_model=list[SampleListItem], status_code=200)
+async def get_samples(
+    current_user: CurrentUser = Depends(RequireRole(Role.USER)),
+    session: AsyncSession = Depends(get_db_session),
+    service: SampleService = Depends(get_sample_service),
+):
+    return await service.get_samples(current_user.id, session)

@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.enums import Status
+
 
 class SampleRead(BaseModel):
     id: int
@@ -11,3 +13,11 @@ class SampleRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SampleListItem(BaseModel):
+    sample_id: int
+    filename: str
+    uploaded_at: datetime
+    latest_job_id: int
+    latest_job_status: Status

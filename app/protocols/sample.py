@@ -1,5 +1,6 @@
-from typing import Protocol
+from typing import Protocol, Sequence
 
+from sqlalchemy.engine import RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Sample, UserSample
@@ -25,3 +26,7 @@ class UserSampleCRUDProtocol(Protocol):
     async def get_by_user_and_sample(
         self, session: AsyncSession, user_id: int, sample_id: int
     ) -> UserSample | None: ...
+
+    async def get_samples_by_user(
+        self, session: AsyncSession, user_id: int
+    ) -> Sequence[RowMapping]: ...
