@@ -117,7 +117,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_user_samples")),
         sa.UniqueConstraint(
-            "user_id", "sample_id", name=op.f("uq_user_samples_user_id")
+            "user_id", "sample_id", name=op.f("uq_user_samples_user_id_sample_id")
         ),
     )
     op.create_table(
