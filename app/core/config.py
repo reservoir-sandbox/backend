@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     refresh_token_expire_m: int = 43200  # 30 days
     cookie_secure: bool = True
     cookie_samesite: Literal["lax", "strict", "none"] = "strict"
+    engine_version: str = "1.0.0"
 
     @field_validator("database_url")
     @classmethod

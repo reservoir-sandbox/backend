@@ -16,9 +16,11 @@ class JobService:
         self.job_task_crud = job_task_crud
 
     async def create_job_for_sample(
-        self, session: AsyncSession, sample: Sample, user_id: int
+        self, session: AsyncSession, sample: Sample, engine_version: str
     ) -> Job:
-        job = await self.job_crud.create(session, Job(sample_id=sample.id))
+        job = await self.job_crud.create(
+            session, Job(sample_id=sample.id, engine_version=engine_version)
+        )
 
         for task_type in TaskType:
             await self.job_task_crud.create(
@@ -30,6 +32,13 @@ class JobService:
             )
 
         return job
+
+    async def get_active_job(
+        self, session: AsyncSession, sample_id: int, engine_version: str
+    ) -> Job | None:
+        return await self.job_crud.get_active_by_sample_and_version(
+            session, sample_id, engine_version
+        )
 
     async def get_latest_job_by_sample_id(
         self, session: AsyncSession, sample_id: int

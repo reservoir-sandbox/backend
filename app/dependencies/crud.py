@@ -1,4 +1,11 @@
-from app.crud import JobCRUD, JobTaskCRUD, SampleCRUD, UserCRUD, UserSampleCRUD
+from app.crud import (
+    JobCRUD,
+    JobTaskCRUD,
+    SampleCRUD,
+    UserCRUD,
+    UserSampleCRUD,
+    UserSampleJobCRUD,
+)
 
 
 async def get_user_crud():
@@ -11,6 +18,10 @@ async def get_sample_crud():
 
 async def get_user_sample_crud():
     return UserSampleCRUD()
+
+
+async def get_user_sample_job_crud():
+    return UserSampleJobCRUD()
 
 
 async def get_job_crud():

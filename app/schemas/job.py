@@ -8,6 +8,7 @@ from app.enums import Status, TaskType
 class JobRead(BaseModel):
     id: int
     sample_id: int
+    engine_version: str
     status: Status
     created_at: datetime
     started_at: datetime | None

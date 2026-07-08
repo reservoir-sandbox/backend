@@ -14,6 +14,10 @@ class JobCRUDProtocol(Protocol):
         self, session: AsyncSession, sample_id: int
     ) -> Job | None: ...
 
+    async def get_active_by_sample_and_version(
+        self, session: AsyncSession, sample_id: int, engine_version: str
+    ) -> Job | None: ...
+
     async def get_job_details_by_id(
         self, session: AsyncSession, job_id: int, user_id: int
     ) -> Job | None: ...

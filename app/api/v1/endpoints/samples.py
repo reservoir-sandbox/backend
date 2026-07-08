@@ -39,3 +39,13 @@ async def delete_user_sample(
     service: SampleService = Depends(get_sample_service),
 ):
     await service.delete_user_sample(id, current_user.id, session)
+
+
+@router.get("/samples/{id:int}/jobs", response_model=list[JobRead], status_code=200)
+async def get_history_jobs(
+    id: int,
+    current_user: CurrentUser = Depends(RequireRole(Role.USER)),
+    session: AsyncSession = Depends(get_db_session),
+    service: SampleService = Depends(get_sample_service),
+):
+    return await service.get_history_jobs(id, current_user.id, session)

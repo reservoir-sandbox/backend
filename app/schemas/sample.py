@@ -19,5 +19,7 @@ class SampleListItem(BaseModel):
     sample_id: int
     filename: str
     uploaded_at: datetime
-    latest_job_id: int
-    latest_job_status: Status
+    current_job_id: int | None
+    current_job_status: Status | None
+    engine_version: str | None
+    analysis_stale: bool | None

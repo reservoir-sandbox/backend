@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 if TYPE_CHECKING:
+    from .job import Job
     from .sample import Sample
     from .user import User
 
@@ -28,6 +29,11 @@ class UserSample(Base):
 
     filename: Mapped[str] = mapped_column(nullable=False)
 
+    current_job_id: Mapped[int | None] = mapped_column(
+        ForeignKey("jobs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -36,5 +42,6 @@ class UserSample(Base):
 
     user: Mapped[User] = relationship(back_populates="user_samples")
     sample: Mapped[Sample] = relationship(back_populates="user_samples")
+    current_job: Mapped[Job | None] = relationship(foreign_keys=[current_job_id])
 
     __table_args__ = (UniqueConstraint("user_id", "sample_id"),)

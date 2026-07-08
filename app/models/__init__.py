@@ -4,5 +4,6 @@ from .job_task import JobTask
 from .sample import Sample
 from .user import User
 from .user_sample import UserSample
+from .user_sample_job import UserSampleJob
 
-__all__ = ("Base", "User", "Sample", "Job", "UserSample", "JobTask")
+__all__ = ("Base", "User", "Sample", "Job", "UserSample", "JobTask", "UserSampleJob")

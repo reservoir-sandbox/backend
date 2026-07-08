@@ -1,7 +1,14 @@
 from fastapi import Depends
 
 from app.core import Settings, get_settings
-from app.crud import JobCRUD, JobTaskCRUD, SampleCRUD, UserCRUD, UserSampleCRUD
+from app.crud import (
+    JobCRUD,
+    JobTaskCRUD,
+    SampleCRUD,
+    UserCRUD,
+    UserSampleCRUD,
+    UserSampleJobCRUD,
+)
 from app.db import S3Client
 from app.services import (
     AuthService,
@@ -17,6 +24,7 @@ from .crud import (
     get_sample_crud,
     get_user_crud,
     get_user_sample_crud,
+    get_user_sample_job_crud,
 )
 from .s3 import get_s3_client
 
@@ -48,8 +56,14 @@ async def get_sample_service(
     job_service: JobService = Depends(get_job_service),
     sample_crud: SampleCRUD = Depends(get_sample_crud),
     user_sample_crud: UserSampleCRUD = Depends(get_user_sample_crud),
+    user_sample_job_crud: UserSampleJobCRUD = Depends(get_user_sample_job_crud),
     settings: Settings = Depends(get_settings),
 ):
     return SampleService(
-        storage_service, job_service, sample_crud, user_sample_crud, settings
+        storage_service,
+        job_service,
+        sample_crud,
+        user_sample_crud,
+        user_sample_job_crud,
+        settings,
     )

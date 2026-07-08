@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.enums import Status
@@ -22,6 +22,11 @@ class Job(Base):
         ForeignKey("samples.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
+    )
+
+    engine_version: Mapped[str] = mapped_column(
+        nullable=False,
+        default="1.0.0",
     )
 
     status: Mapped[Status] = mapped_column(
@@ -51,3 +56,5 @@ class Job(Base):
         back_populates="job",
         cascade="all, delete-orphan",
     )
+
+    __table_args__ = (Index(None, "sample_id", "engine_version", "status"),)

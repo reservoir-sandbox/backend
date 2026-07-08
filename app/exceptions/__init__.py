@@ -5,6 +5,7 @@ from .custom import (
     InvalidCredentials,
     InvalidELFError,
     JobNotFoundError,
+    SampleNotFoundError,
     TokenExpiredError,
     TokenInvalidError,
     UserAlreadyExists,
@@ -24,4 +25,5 @@ __all__ = (
     "FileTooLargeError",
     "InvalidELFError",
     "JobNotFoundError",
+    "SampleNotFoundError",
 )

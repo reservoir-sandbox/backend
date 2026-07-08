@@ -4,10 +4,13 @@ from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import Settings
-from app.enums import Status
-from app.exceptions import FileTooLargeError, InvalidELFError
+from app.exceptions import FileTooLargeError, InvalidELFError, SampleNotFoundError
 from app.models import Job, Sample, UserSample
-from app.protocols import SampleCRUDProtocol, UserSampleCRUDProtocol
+from app.protocols import (
+    SampleCRUDProtocol,
+    UserSampleCRUDProtocol,
+    UserSampleJobCRUDProtocol,
+)
 from app.schemas.sample import SampleListItem
 from app.utils import calculate_sha256
 
@@ -25,12 +28,14 @@ class SampleService:
         job_service: JobService,
         sample_crud: SampleCRUDProtocol,
         user_sample_crud: UserSampleCRUDProtocol,
+        user_sample_job_crud: UserSampleJobCRUDProtocol,
         settings: Settings,
     ):
         self.storage_service = storage_service
         self.job_service = job_service
         self.sample_crud = sample_crud
         self.user_sample_crud = user_sample_crud
+        self.user_sample_job_crud = user_sample_job_crud
         self.settings = settings
 
     def _validate_elf(self, file_stream: BinaryIO) -> int:
@@ -47,12 +52,19 @@ class SampleService:
         file_stream.seek(0)
         return size
 
+    async def _pin_job(
+        self, session: AsyncSession, user_sample: UserSample, job: Job
+    ) -> None:
+        await self.user_sample_crud.set_current_job(session, user_sample, job)
+        await self.user_sample_job_crud.create(session, user_sample.id, job.id)
+
     async def upload_sample(
         self, sample: UploadFile, user_id: int, session: AsyncSession
     ) -> Job:
         file_stream: BinaryIO = sample.file
         size = self._validate_elf(file_stream)
         sha256_hash = calculate_sha256(file_stream)
+        engine_version = self.settings.engine_version
 
         existing_sample = await self.sample_crud.get_by_sha256(session, sha256_hash)
         if existing_sample:
@@ -60,7 +72,7 @@ class SampleService:
                 session, user_id, existing_sample.id
             )
             if not user_sample:
-                await self.user_sample_crud.create(
+                user_sample = await self.user_sample_crud.create(
                     session,
                     UserSample(
                         user_id=user_id,
@@ -69,16 +81,14 @@ class SampleService:
                     ),
                 )
 
-            job = await self.job_service.get_latest_job_by_sample_id(
-                session, existing_sample.id
+            job = await self.job_service.get_active_job(
+                session, existing_sample.id, engine_version
             )
-            if (job is None) or (
-                job.status not in (Status.PENDING, Status.RUNNING, Status.COMPLETED)
-            ):
+            if job is None:
                 job = await self.job_service.create_job_for_sample(
-                    session, existing_sample, user_id
+                    session, existing_sample, engine_version
                 )
-
+            await self._pin_job(session, user_sample, job)
             return job
 
         await self.storage_service.upload_file(file_stream, sha256_hash)
@@ -92,7 +102,7 @@ class SampleService:
             ),
         )
 
-        await self.user_sample_crud.create(
+        user_sample = await self.user_sample_crud.create(
             session,
             UserSample(
                 user_id=user_id,
@@ -100,15 +110,39 @@ class SampleService:
                 filename=sample.filename,
             ),
         )
-        return await self.job_service.create_job_for_sample(
-            session, sample_model, user_id
+        job = await self.job_service.create_job_for_sample(
+            session, sample_model, engine_version
         )
+        await self._pin_job(session, user_sample, job)
+        return job
+
+    async def get_history_jobs(
+        self, sample_id: int, user_id: int, session: AsyncSession
+    ) -> list[Job]:
+        user_sample = await self.user_sample_crud.get_by_user_and_sample(
+            session, user_id, sample_id
+        )
+        if not user_sample:
+            raise SampleNotFoundError()
+        result = await self.user_sample_job_crud.get(session, user_sample.id)
+        return list(result)
 
     async def get_samples(
         self, user_id: int, session: AsyncSession
     ) -> list[SampleListItem]:
         result = await self.user_sample_crud.get_samples_by_user(session, user_id)
-        return [SampleListItem(**row) for row in result]
+        curr_engine_version = self.settings.engine_version
+        return [
+            SampleListItem(
+                **row,
+                analysis_stale=(
+                    row["engine_version"] is not None
+                    and tuple(map(int, row["engine_version"].split(".")))
+                    < tuple(map(int, curr_engine_version.split(".")))
+                ),
+            )
+            for row in result
+        ]
 
     async def delete_user_sample(
         self, sample_id: int, user_id: int, session: AsyncSession

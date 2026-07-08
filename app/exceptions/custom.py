@@ -55,3 +55,8 @@ class InvalidELFError(AppException):
 class JobNotFoundError(AppException):
     status_code = 404
     detail = "Job not found"
+
+
+class SampleNotFoundError(AppException):
+    status_code = 404
+    detail = "Sample not found"
