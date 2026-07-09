@@ -15,7 +15,7 @@ env:
 jobs:
   # --- JOB 1: Lint, Type Check and Run Tests (100% from your original code) ---
   lint-test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
     needs: lint-test
     # We only want to deploy to production/GitOps when pushing to main branch
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     permissions:
       contents: write
       packages: write
