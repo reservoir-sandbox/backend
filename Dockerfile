@@ -41,6 +41,10 @@ COPY --from=builder /install /usr/local
 # Copy ONLY the required application production source code (prevents copying .git, tests, etc.)
 COPY ./app ./app
 
+COPY ./alembic.ini ./alembic.ini
+
+COPY ./alembic ./alembic
+
 # Adjust filesystem ownership to the non-root execution user
 RUN chown -R fastapi:fastapi /app
 
