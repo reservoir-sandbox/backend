@@ -50,11 +50,10 @@ RUN chown -R fastapi:fastapi /app
 
 USER fastapi
 
-# CRITICAL FIX: Port changed to 8080 to perfectly match your Kubernetes service values
-EXPOSE 8080
+EXPOSE 8000
 
 # Note: We removed the inline Docker HEALTHCHECK.
 # Probes will be fully managed at the Kubernetes pod level via Flux deployment.
 
-# Start FastAPI application using uvicorn server on port 8080
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Start FastAPI application using uvicorn server on port 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
