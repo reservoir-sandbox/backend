@@ -6,6 +6,7 @@ from .custom import (
     InvalidELFError,
     JobNotFoundError,
     SampleNotFoundError,
+    TaskNotFoundError,
     TokenExpiredError,
     TokenInvalidError,
     UserAlreadyExists,
@@ -26,4 +27,5 @@ __all__ = (
     "InvalidELFError",
     "JobNotFoundError",
     "SampleNotFoundError",
+    "TaskNotFoundError",
 )

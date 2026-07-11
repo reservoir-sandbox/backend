@@ -12,6 +12,7 @@ from app.crud import (
 from app.db import S3Client
 from app.services import (
     AuthService,
+    JobLauncher,
     JobService,
     SampleService,
     StorageService,
@@ -26,6 +27,7 @@ from .crud import (
     get_user_sample_crud,
     get_user_sample_job_crud,
 )
+from .job_launcher import get_job_launcher
 from .s3 import get_s3_client
 
 
@@ -54,6 +56,7 @@ async def get_job_service(
 async def get_sample_service(
     storage_service: StorageService = Depends(get_storage_service),
     job_service: JobService = Depends(get_job_service),
+    job_launcher: JobLauncher = Depends(get_job_launcher),
     sample_crud: SampleCRUD = Depends(get_sample_crud),
     user_sample_crud: UserSampleCRUD = Depends(get_user_sample_crud),
     user_sample_job_crud: UserSampleJobCRUD = Depends(get_user_sample_job_crud),
@@ -62,6 +65,7 @@ async def get_sample_service(
     return SampleService(
         storage_service,
         job_service,
+        job_launcher,
         sample_crud,
         user_sample_crud,
         user_sample_job_crud,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, func
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.enums import Status, TaskType
@@ -33,6 +33,9 @@ class JobTask(Base):
         default=Status.PENDING,
         nullable=False,
     )
+
+    report_object_name: Mapped[str | None] = mapped_column(nullable=True)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

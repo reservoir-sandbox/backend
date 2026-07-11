@@ -60,3 +60,8 @@ class JobNotFoundError(AppException):
 class SampleNotFoundError(AppException):
     status_code = 404
     detail = "Sample not found"
+
+
+class TaskNotFoundError(AppException):
+    status_code = 404
+    detail = "Task not found"

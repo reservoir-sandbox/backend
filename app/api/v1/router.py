@@ -1,6 +1,12 @@
 from fastapi import APIRouter
 
-from .endpoints import auth_router, jobs_router, samples_router, users_router
+from .endpoints import (
+    auth_router,
+    internal_router,
+    jobs_router,
+    samples_router,
+    users_router,
+)
 
 router = APIRouter()
 
@@ -8,3 +14,4 @@ router.include_router(auth_router)
 router.include_router(users_router)
 router.include_router(samples_router)
 router.include_router(jobs_router)
+router.include_router(internal_router, prefix="/internal")

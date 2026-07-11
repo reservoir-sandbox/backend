@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     cookie_secure: bool = True
     cookie_samesite: Literal["lax", "strict", "none"] = "strict"
     engine_version: str = "1.0.0"
+    # Worker orchestration
+    job_launcher: Literal["noop", "k8s"] = "noop"
+    jobs_namespace: str = "jobs"
+    backend_callback_url: str = "CHANGE_ME_BACKEND_CALLBACK_URL"
+    worker_callback_secret: str = "CHANGE_ME_WORKER_CALLBACK_SECRET_MIN_32_CHARS"
 
     @field_validator("database_url")
     @classmethod

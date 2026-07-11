@@ -1,4 +1,4 @@
-from .job import JobDetails, JobRead, JobTaskRead
+from .job import JobDetails, JobRead, JobTaskRead, TaskCallback
 from .sample import SampleListItem, SampleRead
 from .user import Token, UserBase, UserRead, UserRegister
 
@@ -12,4 +12,5 @@ __all__ = (
     "JobRead",
     "JobTaskRead",
     "JobDetails",
+    "TaskCallback",
 )

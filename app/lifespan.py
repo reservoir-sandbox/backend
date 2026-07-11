@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.core import get_settings
 from app.db import DatabaseClient, RedisClient, S3Client
+from app.services import build_job_launcher
 
 
 @asynccontextmanager
@@ -24,6 +25,8 @@ async def lifespan(app: FastAPI):
         endpoint_url=settings.s3_endpoint_url,
         bucket_name=settings.s3_bucket_name,
     )
+
+    app.state.job_launcher = build_job_launcher(settings)
 
     yield
 

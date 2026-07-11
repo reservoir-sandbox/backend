@@ -2,8 +2,9 @@ from typing import BinaryIO
 
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
-from app.core import Settings
+from app.core import Settings, logger
 from app.exceptions import FileTooLargeError, InvalidELFError, SampleNotFoundError
 from app.models import Job, Sample, UserSample
 from app.protocols import (
@@ -14,6 +15,7 @@ from app.protocols import (
 from app.schemas.sample import SampleListItem
 from app.utils import calculate_sha256
 
+from .job_launcher_service import JobLauncher
 from .job_service import JobService
 from .storage_service import StorageService
 
@@ -26,6 +28,7 @@ class SampleService:
         self,
         storage_service: StorageService,
         job_service: JobService,
+        job_launcher: JobLauncher,
         sample_crud: SampleCRUDProtocol,
         user_sample_crud: UserSampleCRUDProtocol,
         user_sample_job_crud: UserSampleJobCRUDProtocol,
@@ -33,6 +36,7 @@ class SampleService:
     ):
         self.storage_service = storage_service
         self.job_service = job_service
+        self.job_launcher = job_launcher
         self.sample_crud = sample_crud
         self.user_sample_crud = user_sample_crud
         self.user_sample_job_crud = user_sample_job_crud
@@ -57,6 +61,14 @@ class SampleService:
     ) -> None:
         await self.user_sample_crud.set_current_job(session, user_sample, job)
         await self.user_sample_job_crud.create(session, user_sample.id, job.id)
+
+    async def _launch(self, session: AsyncSession, job: Job, sample: Sample) -> None:
+        tasks = await self.job_service.get_job_tasks_by_job_id(session, job.id)
+        await session.commit()
+        try:
+            await run_in_threadpool(self.job_launcher.launch_job, job, sample, tasks)
+        except Exception as e:
+            logger.error(f"Failed to launch job {job.id}: {e}")
 
     async def upload_sample(
         self, sample: UploadFile, user_id: int, session: AsyncSession
@@ -84,11 +96,14 @@ class SampleService:
             job = await self.job_service.get_active_job(
                 session, existing_sample.id, engine_version
             )
+            launch = job is None
             if job is None:
                 job = await self.job_service.create_job_for_sample(
                     session, existing_sample, engine_version
                 )
             await self._pin_job(session, user_sample, job)
+            if launch:
+                await self._launch(session, job, existing_sample)
             return job
 
         await self.storage_service.upload_file(file_stream, sha256_hash)
@@ -114,6 +129,7 @@ class SampleService:
             session, sample_model, engine_version
         )
         await self._pin_job(session, user_sample, job)
+        await self._launch(session, job, sample_model)
         return job
 
     async def get_history_jobs(

@@ -12,8 +12,12 @@ class JobCRUD:
         await session.flush()
         return job
 
-    async def get_by_id(self, session: AsyncSession, job_id: int) -> Job | None:
+    async def get_by_id(
+        self, session: AsyncSession, job_id: int, for_update: bool = False
+    ) -> Job | None:
         stmt = select(Job).where(Job.id == job_id)
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await session.scalar(stmt)
         return result
 
