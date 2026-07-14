@@ -49,8 +49,10 @@ async def get_storage_service(s3_client: S3Client = Depends(get_s3_client)):
 async def get_job_service(
     job_crud: JobCRUD = Depends(get_job_crud),
     job_task_crud: JobTaskCRUD = Depends(get_job_task_crud),
+    sample_crud: SampleCRUD = Depends(get_sample_crud),
+    job_launcher: JobLauncher = Depends(get_job_launcher),
 ):
-    return JobService(job_crud, job_task_crud)
+    return JobService(job_crud, job_task_crud, sample_crud, job_launcher)
 
 
 async def get_sample_service(

@@ -1,12 +1,14 @@
 from datetime import datetime, timezone
 
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums import TaskType
 from app.enums.status import Status
 from app.exceptions import JobNotFoundError, TaskNotFoundError
 from app.models import Job, JobTask, Sample
-from app.protocols import JobCRUDProtocol, JobTaskCRUDProtocol
+from app.protocols import JobCRUDProtocol, JobTaskCRUDProtocol, SampleCRUDProtocol
+from app.services.job_launcher_service import JobLauncher
 
 
 class JobService:
@@ -14,9 +16,13 @@ class JobService:
         self,
         job_crud: JobCRUDProtocol,
         job_task_crud: JobTaskCRUDProtocol,
+        sample_crud: SampleCRUDProtocol,
+        job_launcher: JobLauncher,
     ):
         self.job_crud = job_crud
         self.job_task_crud = job_task_crud
+        self.sample_crud = sample_crud
+        self.job_launcher = job_launcher
 
     async def create_job_for_sample(
         self, session: AsyncSession, sample: Sample, engine_version: str
@@ -114,4 +120,49 @@ class JobService:
         task.error = error
 
         await self._recompute_job_status(session, task.job_id, now)
+
+        if task.task_type == TaskType.STATIC and status in (
+            Status.COMPLETED,
+            Status.FAILED,
+        ):
+            await self._maybe_launch_ml(session, task.job_id, task)
+
         return task
+
+    async def _maybe_launch_ml(
+        self, session: AsyncSession, job_id: int, static_task: JobTask
+    ) -> None:
+        """Launches the ML task once static analysis finishes.
+
+        ML summarization consumes the static-analysis report, so it can't be
+        launched up front alongside static/sandbox - it has to wait for
+        static to reach a terminal state.
+        """
+        tasks = await self.job_task_crud.get_tasks_by_job_id(session, job_id)
+        ml_task = next((t for t in tasks if t.task_type == TaskType.ML), None)
+        if ml_task is None or ml_task.status != Status.PENDING:
+            return
+
+        if static_task.status == Status.FAILED:
+            now = datetime.now(timezone.utc)
+            ml_task.status = Status.FAILED
+            ml_task.error = "Static analysis failed; nothing to summarize"
+            ml_task.started_at = ml_task.started_at or now
+            ml_task.finished_at = now
+            await self._recompute_job_status(session, job_id, now)
+            return
+
+        job = await self.job_crud.get_by_id(session, job_id)
+        if job is None:
+            return
+        sample = await self.sample_crud.get_by_id(session, job.sample_id)
+        if sample is None:
+            return
+
+        extra_values = {
+            "staticReport": static_task.result or "",
+            "staticReportS3Key": static_task.report_object_name or "",
+        }
+        await run_in_threadpool(
+            self.job_launcher.launch_task, job, sample, ml_task, extra_values
+        )

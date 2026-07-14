@@ -2,6 +2,7 @@ from kubernetes import client, config
 from kubernetes.config.config_exception import ConfigException
 
 from app.core import Settings, logger
+from app.enums import TaskType
 from app.models import Job, JobTask, Sample
 
 
@@ -20,16 +21,29 @@ class JobLauncher:
             "sha256": sample.sha256,
         }
 
-    def launch_task(self, job: Job, sample: Sample, task: JobTask) -> None:
+    def launch_task(
+        self,
+        job: Job,
+        sample: Sample,
+        task: JobTask,
+        extra_values: dict | None = None,
+    ) -> None:
+        values = self._values(job, sample, task)
+        if extra_values:
+            values.update(extra_values)
         logger.info(
             "[noop] launch task_id=%s type=%s values=%s",
             task.id,
             task.task_type,
-            self._values(job, sample, task),
+            values,
         )
 
     def launch_job(self, job: Job, sample: Sample, tasks: list[JobTask]) -> None:
+        # ML is launched separately, once the static-analysis task it depends
+        # on reaches a terminal state - see JobService.apply_task_result.
         for task in tasks:
+            if task.task_type == TaskType.ML:
+                continue
             self.launch_task(job, sample, task)
 
 
@@ -41,9 +55,17 @@ class K8sJobLauncher(JobLauncher):
         except ConfigException:
             config.load_kube_config()
 
-    def launch_task(self, job: Job, sample: Sample, task: JobTask) -> None:
+    def launch_task(
+        self,
+        job: Job,
+        sample: Sample,
+        task: JobTask,
+        extra_values: dict | None = None,
+    ) -> None:
         custom_api = client.CustomObjectsApi()
         values = self._values(job, sample, task)
+        if extra_values:
+            values.update(extra_values)
         release_name = f"job-run-{task.task_type.value}-{task.id}"
 
         job_manifest = {
