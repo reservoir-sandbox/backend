@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from starlette.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.enums import TaskType
 from app.enums.status import Status
