@@ -15,6 +15,7 @@ class S3Client:
             "aws_access_key_id": access_key,
             "aws_secret_access_key": secret_key,
             "endpoint_url": endpoint_url,
+            "region_name": "local-cluster",
         }
         self.bucket_name = bucket_name
         self.session = get_session()
