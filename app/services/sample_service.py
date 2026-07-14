@@ -106,14 +106,15 @@ class SampleService:
                 await self._launch(session, job, existing_sample)
             return job
 
-        await self.storage_service.upload_file(file_stream, sha256_hash)
+        object_name = f"uploads/{sha256_hash}"
+        await self.storage_service.upload_file(file_stream, object_name)
 
         sample_model = await self.sample_crud.create(
             session,
             Sample(
                 size=size,
                 sha256=sha256_hash,
-                object_name=f"uploads/{sha256_hash}",
+                object_name=object_name,
             ),
         )
 
