@@ -119,8 +119,8 @@ jobs:
           NEW_IMAGE="ghcr.io/reservoir-sandbox/backend:${{ steps.meta.outputs.version }}"
 
           if [ -f "$MANIFEST_PATH" ]; then
-            # Меняем значение поля image у первого контейнера в Deployment бэкенда
-            yq eval -i ".spec.template.spec.containers.image = \"$NEW_IMAGE\"" "$MANIFEST_PATH"
+            # Меняем значение поля image у контейнера и initContainer'а (alembic-migrate) в Deployment бэкенда
+            yq eval -i "(.spec.template.spec.containers[].image, .spec.template.spec.initContainers[].image) = \"$NEW_IMAGE\"" "$MANIFEST_PATH"
             echo "✅ Successfully updated backend image to $NEW_IMAGE in $MANIFEST_PATH"
           else
             echo "❌ Error: GitOps manifest not found at $MANIFEST_PATH"
@@ -133,7 +133,7 @@ jobs:
           git -C gitops-deployment config --global user.name "github-actions[bot]"
           git -C gitops-deployment config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          git -C gitops-deployment add apps/backend/backend-release.yaml
+          git -C gitops-deployment add apps/backend/deployment.yaml
           if [ -n "$(git -C gitops-deployment status --porcelain)" ]; then
             git -C gitops-deployment commit -m "chore(backend): auto-update image tag to ${{ steps.meta.outputs.version }}"
             git -C gitops-deployment push
